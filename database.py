@@ -137,6 +137,45 @@ class PerformanceDB:
         cursor.execute('SELECT DISTINCT period FROM performance_results ORDER BY period DESC')
         return [row[0] for row in cursor.fetchall()]
     
+    def get_periods_by_type(self, period_type=None):
+        """
+        获取指定类型的周期列表
+        
+        参数:
+            period_type: "月度"/"季度"/"半年度"/"年度" 或 None(全部)
+        
+        返回:
+            周期列表（按时间倒序）
+        """
+        cursor = self.conn.cursor()
+        
+        # 中文到英文的映射（数据库中存储的是英文）
+        period_type_mapping = {
+            "月度": "monthly",
+            "季度": "quarterly",
+            "半年度": "half_yearly",
+            "年度": "yearly"
+        }
+        
+        if period_type and period_type != "全部":
+            # 将中文转换为英文
+            english_type = period_type_mapping.get(period_type, period_type)
+            
+            cursor.execute('''
+                SELECT DISTINCT period 
+                FROM performance_results 
+                WHERE period_type = ?
+                ORDER BY period DESC
+            ''', (english_type,))
+        else:
+            cursor.execute('''
+                SELECT DISTINCT period 
+                FROM performance_results 
+                ORDER BY period DESC
+            ''')
+        
+        return [row[0] for row in cursor.fetchall()]
+    
     def get_all_employees(self, period=None):
         """获取所有员工"""
         cursor = self.conn.cursor()
@@ -226,14 +265,40 @@ class PerformanceDB:
         ''', (period, file_type, record_count, uploader, status))
         self.conn.commit()
     
-    def get_employee_history(self, employee_id):
-        """获取员工历史绩效"""
+    def get_employee_history(self, employee_id, period_type=None):
+        """
+        获取员工历史绩效
+        
+        参数:
+            employee_id: 员工ID
+            period_type: 周期类型筛选（"月度"/"季度"/"半年度"/"年度" 或 None）
+        """
         cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT * FROM performance_results 
-            WHERE employee_id = ?
-            ORDER BY period
-        ''', (employee_id,))
+        
+        # 中文到英文的映射（数据库中存储的是英文）
+        period_type_mapping = {
+            "月度": "monthly",
+            "季度": "quarterly",
+            "半年度": "half_yearly",
+            "年度": "yearly"
+        }
+        
+        if period_type and period_type != "全部":
+            # 将中文转换为英文
+            english_type = period_type_mapping.get(period_type, period_type)
+            
+            cursor.execute('''
+                SELECT * FROM performance_results 
+                WHERE employee_id = ? AND period_type = ?
+                ORDER BY period
+            ''', (employee_id, english_type))
+        else:
+            cursor.execute('''
+                SELECT * FROM performance_results 
+                WHERE employee_id = ?
+                ORDER BY period
+            ''', (employee_id,))
+        
         rows = cursor.fetchall()
         # 转换为字典列表
         return [dict(row) for row in rows]

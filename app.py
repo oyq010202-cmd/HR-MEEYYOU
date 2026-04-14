@@ -731,39 +731,23 @@ except:
         st.markdown('<div style="font-size:18px;font-weight:600;color:#2D3748;padding-top:10px;">绩效考核管理系统</div>', unsafe_allow_html=True)
     st.sidebar.markdown('<div style="height:16px;"></div>', unsafe_allow_html=True)
 
-# 导航分组
-st.sidebar.markdown('<div class="sidebar-section">数据管理</div>', unsafe_allow_html=True)
-
+# 单个radio包含所有菜单选项
 menu = st.sidebar.radio(
     "导航菜单",
-    ["📤 数据上传", "🗄️ 数据管理"],
+    [
+        "📤 数据上传",
+        "🗄️ 数据管理",
+        "👤 员工绩效追踪",
+        "📈 部门绩效分析",
+        "📊 绩效分布监控",
+        "💬 面谈质量监控",
+        "🔄 考核方案管理",
+        "🔍 智能查询",
+        "📊 高级分析"
+    ],
     index=0,
     label_visibility="collapsed"
 )
-
-st.sidebar.markdown('<div class="sidebar-section">效能分析</div>', unsafe_allow_html=True)
-
-if menu in ["📤 数据上传", "🗄️ 数据管理"]:
-    analysis_menu = st.sidebar.radio(
-        "分析菜单",
-        ["👤 员工绩效追踪", "📈 部门绩效分析", "📊 绩效分布监控", "💬 面谈质量监控"],
-        index=None,
-        label_visibility="collapsed"
-    )
-    if analysis_menu:
-        menu = analysis_menu
-
-st.sidebar.markdown('<div class="sidebar-section">高级功能</div>', unsafe_allow_html=True)
-
-if menu in ["📤 数据上传", "🗄️ 数据管理", "👤 员工绩效追踪", "📈 部门绩效分析", "📊 绩效分布监控", "💬 面谈质量监控"]:
-    advanced_menu = st.sidebar.radio(
-        "高级菜单",
-        ["🔄 考核方案管理", "🔍 智能查询", "📊 高级分析"],
-        index=None,
-        label_visibility="collapsed"
-    )
-    if advanced_menu:
-        menu = advanced_menu
 
 # 底部版本信息
 st.sidebar.markdown("""
@@ -1015,25 +999,11 @@ elif menu == "👤 员工绩效追踪":
             employee_id = employee_options[selected_employee]
             employee_name = selected_employee.split(' (')[0]
             
-            # 获取员工历史数据
-            history = db.get_employee_history(employee_id)
-            
-            # 根据周期类型筛选
-            if period_type_filter != "全部":
-                # 建立中文到英文的映射
-                period_type_mapping = {
-                    "月度": "monthly",
-                    "季度": "quarterly",
-                    "半年度": "half_yearly",
-                    "年度": "yearly"
-                }
-                
-                # 获取对应的英文类型
-                target_type = period_type_mapping.get(period_type_filter)
-                
-                # 根据period_type字段筛选
-                if target_type:
-                    history = [h for h in history if h.get('period_type') == target_type]
+            # 获取员工历史数据（直接在数据库层筛选周期类型）
+            history = db.get_employee_history(
+                employee_id, 
+                period_type=None if period_type_filter == "全部" else period_type_filter
+            )
             
             if history:
                 st.markdown(f"### {employee_name} 的绩效记录")
@@ -1136,16 +1106,32 @@ elif menu == "📈 部门绩效分析":
         </div>
         """, unsafe_allow_html=True)
         
-        # 周期和部门选择
-        col1, col2 = st.columns(2)
+        # 周期类型、周期和部门选择
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            selected_period = st.selectbox("选择考核周期", periods)
+            period_type_dept = st.selectbox(
+                "📅 周期类型",
+                ["全部", "月度", "季度", "半年度", "年度"],
+                key="dept_period_type"
+            )
         
         with col2:
+            # 根据周期类型筛选周期列表
+            filtered_periods = db.get_periods_by_type(
+                None if period_type_dept == "全部" else period_type_dept
+            )
+            
+            if filtered_periods:
+                selected_period = st.selectbox("考核周期", filtered_periods, key="dept_period")
+            else:
+                st.warning(f"⚠️ 暂无{period_type_dept}数据")
+                selected_period = None
+        
+        with col3:
             departments = db.get_all_departments()
             dept_options = ["全部"] + [f"{row[0]} - {row[1]}" if row[1] else row[0] for row in departments]
-            selected_dept = st.selectbox("选择部门", dept_options)
+            selected_dept = st.selectbox("选择部门", dept_options, key="dept_dept")
         
         if selected_period:
             # 获取部门数据
@@ -1230,7 +1216,25 @@ elif menu == "💬 面谈质量监控":
     if not periods:
         st.warning("⚠️ 暂无数据，请先上传绩效数据")
     else:
-        # 创建标签页
+        # 添加全局周期类型筛选器
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 20px;">
+            <div class="card-title">🔍 数据范围筛选</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        period_type_interview = st.selectbox(
+            "📅 周期类型",
+            ["全部", "月度", "季度", "半年度", "年度"],
+            key="interview_period_type"
+        )
+        
+        # 根据周期类型筛选周期列表
+        filtered_periods_interview = db.get_periods_by_type(
+            None if period_type_interview == "全部" else period_type_interview
+        )
+        
+        # 创建标签页（始终创建，即使没有数据）
         tab1, tab2, tab3, tab4 = st.tabs([
             "📈 上级趋势分析",
             "🎯 面谈质量分析", 
@@ -1238,21 +1242,27 @@ elif menu == "💬 面谈质量监控":
             "🏆 上级排名"
         ])
         
+        # 如果没有筛选后的数据，显示警告
+        if not filtered_periods_interview:
+            with tab1:
+                st.warning(f"⚠️ 暂无{period_type_interview}数据")
+        
         # ==================== Tab1: 上级维度趋势分析 ====================
-        with tab1:
-            st.markdown("""
-            <div class="data-card" style="margin-bottom: 20px;">
-                <div class="card-title">📈 上级面谈完成率趋势</div>
-                <div class="card-subtitle">观察不同上级的面谈执行趋势，识别持续优秀/持续落后的管理者</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 筛选器
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # 获取所有上级
-                cursor = db.conn.cursor()
+        if filtered_periods_interview:
+            with tab1:
+                st.markdown("""
+                <div class="data-card" style="margin-bottom: 20px;">
+                    <div class="card-title">📈 上级面谈完成率趋势</div>
+                    <div class="card-subtitle">观察不同上级的面谈执行趋势，识别持续优秀/持续落后的管理者</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 筛选器
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # 获取所有上级
+                    cursor = db.conn.cursor()
                 cursor.execute('''
                     SELECT DISTINCT interviewer 
                     FROM interview_records 
@@ -1741,24 +1751,48 @@ elif menu == "🔍 智能查询":
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        search_name = st.text_input("员工姓名/工号", placeholder="输入姓名或工号")
+        period_type_query = st.selectbox(
+            "📅 周期类型",
+            ["全部", "月度", "季度", "半年度", "年度"],
+            key="query_period_type"
+        )
     
     with col2:
-        periods = db.get_all_periods()
-        period_filter = st.multiselect("考核周期", periods if periods else [])
+        search_name = st.text_input("员工姓名/工号", placeholder="输入姓名或工号", key="query_name")
     
     with col3:
-        score_range = st.slider("分数范围", 0, 100, (70, 100))
+        # 根据周期类型筛选周期列表
+        filtered_periods_query = db.get_periods_by_type(
+            None if period_type_query == "全部" else period_type_query
+        )
+        period_filter = st.multiselect("考核周期", filtered_periods_query if filtered_periods_query else [], key="query_periods")
     
-    if st.button("🔍 查询", type="primary"):
+    with col4:
+        score_range = st.slider("分数范围", 0, 100, (70, 100), key="query_score")
+    
+    if st.button("🔍 查询", type="primary", key="query_button"):
         cursor = db.conn.cursor()
         
         # 构建SQL查询
         query = "SELECT * FROM performance_results WHERE 1=1"
         params = []
+        
+        # 中文到英文的映射
+        period_type_mapping = {
+            "月度": "monthly",
+            "季度": "quarterly",
+            "半年度": "half_yearly",
+            "年度": "yearly"
+        }
+        
+        # 添加周期类型筛选
+        if period_type_query != "全部":
+            english_type = period_type_mapping.get(period_type_query, period_type_query)
+            query += " AND period_type = ?"
+            params.append(english_type)
         
         if search_name:
             query += " AND (employee_name LIKE ? OR employee_id LIKE ?)"
@@ -1831,12 +1865,28 @@ elif menu == "📊 绩效分布监控":
             """, unsafe_allow_html=True)
             
             # 筛选条件
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             
             with col1:
-                selected_period = st.selectbox("📅 考核周期", periods, key="dist_period")
+                period_type_dist = st.selectbox(
+                    "📅 周期类型",
+                    ["全部", "月度", "季度", "半年度", "年度"],
+                    key="dist_period_type"
+                )
             
             with col2:
+                # 根据周期类型筛选周期列表
+                filtered_periods_dist = db.get_periods_by_type(
+                    None if period_type_dist == "全部" else period_type_dist
+                )
+                
+                if filtered_periods_dist:
+                    selected_period = st.selectbox("考核周期", filtered_periods_dist, key="dist_period")
+                else:
+                    st.warning(f"⚠️ 暂无{period_type_dist}数据")
+                    selected_period = None
+            
+            with col3:
                 # 获取部门列表
                 cursor = db.conn.cursor()
                 cursor.execute('''
@@ -1940,19 +1990,30 @@ elif menu == "📊 绩效分布监控":
             st.info("💡 **分析目标**：基于员工最近N期平均分，提前预判年度绩效格局")
             
             # 配置区
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                n_periods = st.slider("📅 选择周期数", 3, 12, 6, help="计算员工最近N期的平均分")
+                period_type_avg = st.selectbox(
+                    "📅 周期类型",
+                    ["全部", "月度", "季度", "半年度", "年度"],
+                    key="avg_period_type"
+                )
             
             with col2:
-                st.markdown(f"**分析范围**：最近 {n_periods} 期")
-                if len(periods) >= n_periods:
-                    st.success(f"✅ 数据充足（共{len(periods)}期）")
-                else:
-                    st.warning(f"⚠️ 数据不足（仅{len(periods)}期）")
+                n_periods = st.slider("选择周期数", 3, 12, 6, help="计算员工最近N期的平均分", key="avg_n_periods")
             
             with col3:
+                # 根据周期类型获取可用周期数
+                filtered_periods_avg = db.get_periods_by_type(
+                    None if period_type_avg == "全部" else period_type_avg
+                )
+                st.markdown(f"**分析范围**：最近 {n_periods} 期 ({period_type_avg})")
+                if len(filtered_periods_avg) >= n_periods:
+                    st.success(f"✅ 数据充足（共{len(filtered_periods_avg)}期）")
+                else:
+                    st.warning(f"⚠️ 数据不足（仅{len(filtered_periods_avg)}期）")
+            
+            with col4:
                 # 部门筛选
                 cursor = db.conn.cursor()
                 cursor.execute('''
@@ -1965,11 +2026,11 @@ elif menu == "📊 绩效分布监控":
                 selected_dept_avg = st.selectbox("🏢 选择部门", departments_avg, key="avg_dept")
             
             with st.spinner('正在计算多周期平均分布...'):
-                # 获取平均分布（支持部门筛选）
+                # 获取平均分布（支持周期类型和部门筛选）
                 avg_dist_data = processor.get_avg_score_distribution(
-                    periods=None, 
+                    periods=filtered_periods_avg[:n_periods] if filtered_periods_avg else None, 
                     n_periods=n_periods,
-                    department=selected_dept_avg
+                    department=selected_dept_avg if selected_dept_avg != "全部" else None
                 )
                 
                 if avg_dist_data:
@@ -2073,8 +2134,27 @@ elif menu == "📊 绩效分布监控":
             st.markdown("### 🏢 部门绩效分布对比分析")
             st.info("💡 **分析目标**：识别评分偏松/偏严的部门，发现区分度最好的部门")
             
-            # 选择周期
-            selected_period_dept = st.selectbox("📅 选择考核周期", periods, key="dept_dist_period")
+            # 选择周期类型和周期
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                period_type_dept_dist = st.selectbox(
+                    "📅 周期类型",
+                    ["全部", "月度", "季度", "半年度", "年度"],
+                    key="dept_dist_period_type"
+                )
+            
+            with col2:
+                # 根据周期类型筛选周期列表
+                filtered_periods_dept_dist = db.get_periods_by_type(
+                    None if period_type_dept_dist == "全部" else period_type_dept_dist
+                )
+                
+                if filtered_periods_dept_dist:
+                    selected_period_dept = st.selectbox("考核周期", filtered_periods_dept_dist, key="dept_dist_period")
+                else:
+                    st.warning(f"⚠️ 暂无{period_type_dept_dist}数据")
+                    selected_period_dept = None
             
             if selected_period_dept:
                 with st.spinner('正在分析部门分布...'):
@@ -2174,43 +2254,47 @@ elif menu == "📊 绩效分布监控":
             st.markdown("### ⚖️ 强制分布适配分析（年度预判）")
             st.info("💡 **分析目标**：提前判断当前分数分布能否自然满足强制分布要求")
             
-            # 配置区 - 第一行：年份和周期选择
-            col1, col2, col3 = st.columns(3)
+            # 配置区 - 第一行：周期类型、年份和周期选择
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                # 获取所有可用年份
-                cursor = db.conn.cursor()
-                cursor.execute('''
-                    SELECT DISTINCT period 
-                    FROM performance_results 
-                    ORDER BY period DESC
-                ''')
-                all_periods = [row[0] for row in cursor.fetchall()]
+                period_type_forced = st.selectbox(
+                    "📅 周期类型",
+                    ["全部", "月度", "季度", "半年度", "年度"],
+                    key="forced_period_type"
+                )
+            
+            with col2:
+                # 根据周期类型获取可用周期
+                filtered_periods_forced = db.get_periods_by_type(
+                    None if period_type_forced == "全部" else period_type_forced
+                )
                 
-                # 提取年份（从周期中提取，如"2026年3月"→"2026"）
+                # 提取年份
                 available_years = sorted(list(set([
                     period.split('年')[0] + '年' if '年' in period else period[:4] 
-                    for period in all_periods
-                ])), reverse=True)
+                    for period in filtered_periods_forced
+                ])), reverse=True) if filtered_periods_forced else []
                 
                 # 添加"全部年份"选项
                 year_options = ["全部年份"] + available_years
-                selected_year = st.selectbox("📅 选择年份", year_options, key="forced_year")
+                selected_year = st.selectbox("选择年份", year_options, key="forced_year")
             
-            with col2:
-                n_periods_forced = st.slider("📊 基于最近N期平均分", 3, 12, 6, key="forced_periods")
+            with col3:
+                n_periods_forced = st.slider("基于最近N期", 3, 12, 6, key="forced_periods")
                 
                 # 显示实际会使用的周期数
                 if selected_year != "全部年份":
-                    year_periods = [p for p in all_periods if p.startswith(selected_year.replace('年', ''))]
+                    year_periods = [p for p in filtered_periods_forced if p.startswith(selected_year.replace('年', ''))]
                     actual_n = min(n_periods_forced, len(year_periods))
                     if actual_n < n_periods_forced:
                         st.caption(f"⚠️ {selected_year}只有{actual_n}期数据")
                 else:
                     st.caption(f"将使用最近{n_periods_forced}期")
             
-            with col3:
+            with col4:
                 # 部门筛选
+                cursor = db.conn.cursor()
                 cursor.execute('''
                     SELECT DISTINCT department_l2
                     FROM performance_results
@@ -2370,12 +2454,32 @@ elif menu == "📊 高级分析":
         </div>
         """, unsafe_allow_html=True)
         
-        # 周期选择
-        selected_period = st.selectbox(
-            "📅 选择考核周期",
-            periods,
-            index=0
-        )
+        # 周期类型和周期选择
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            period_type_advanced = st.selectbox(
+                "📅 周期类型",
+                ["全部", "月度", "季度", "半年度", "年度"],
+                key="advanced_period_type"
+            )
+        
+        with col2:
+            # 根据周期类型筛选周期列表
+            filtered_periods_advanced = db.get_periods_by_type(
+                None if period_type_advanced == "全部" else period_type_advanced
+            )
+            
+            if filtered_periods_advanced:
+                selected_period = st.selectbox(
+                    "考核周期",
+                    filtered_periods_advanced,
+                    index=0,
+                    key="advanced_period"
+                )
+            else:
+                st.warning(f"⚠️ 暂无{period_type_advanced}数据")
+                selected_period = None
         
         if selected_period:
             # 创建三个标签页

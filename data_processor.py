@@ -1210,7 +1210,7 @@ class DataProcessor:
             'data': data
         }
     
-    def get_avg_score_distribution(self, periods=None, n_periods=6, department=None):
+    def get_avg_score_distribution(self, periods=None, n_periods=6, department=None, year=None):
         """
         获取多周期平均分分布（用于模拟年度评分基础）
         
@@ -1218,6 +1218,7 @@ class DataProcessor:
             periods: 周期列表（None表示最近N期）
             n_periods: 最近几期（默认6期）
             department: 部门名称（可选，None表示全部）
+            year: 年份筛选（如"2026年"，None表示不限年份）
         
         返回:
             基于员工平均分的分布统计
@@ -1226,13 +1227,30 @@ class DataProcessor:
         
         # 如果没有指定周期，获取最近N期
         if periods is None:
-            cursor.execute('''
-                SELECT DISTINCT period 
-                FROM performance_results 
-                ORDER BY period DESC 
-                LIMIT ?
-            ''', (n_periods,))
-            periods = [row[0] for row in cursor.fetchall()]
+            if year:
+                # 先筛选出指定年份的周期
+                cursor.execute('''
+                    SELECT DISTINCT period 
+                    FROM performance_results 
+                    ORDER BY period DESC
+                ''')
+                all_periods = [row[0] for row in cursor.fetchall()]
+                
+                # 筛选出该年份的周期（如"2026年"开头的）
+                year_prefix = year.replace('年', '')
+                year_periods = [p for p in all_periods if p.startswith(year_prefix)]
+                
+                # 从该年份的周期中取最近N期
+                periods = year_periods[:n_periods]
+            else:
+                # 不限年份，直接取最近N期
+                cursor.execute('''
+                    SELECT DISTINCT period 
+                    FROM performance_results 
+                    ORDER BY period DESC 
+                    LIMIT ?
+                ''', (n_periods,))
+                periods = [row[0] for row in cursor.fetchall()]
         
         if not periods:
             return None

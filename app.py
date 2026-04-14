@@ -774,28 +774,18 @@ st.sidebar.markdown("""
 
 # ==================== 页面1: 数据上传 ====================
 if menu == "📤 数据上传":
-    # 使用负margin抵消顶部空白
+    # 使用CSS控制顶部空白（不用div）
     st.markdown("""
     <style>
-        /* 最激进的方法 - 负margin */
-        .element-container:first-child {
-            margin-top: -3rem !important;
-        }
-        section.main > div:first-child {
-            padding-top: 0rem !important;
-        }
-        .block-container {
-            padding-top: 0rem !important;
+        div[data-testid="stVerticalBlock"] > div:first-child {
+            padding-top: 0 !important;
         }
     </style>
     """, unsafe_allow_html=True)
     
-    # 增大负margin：-110px → -130px
-    st.markdown('<div style="margin-top: -130px;"></div>', unsafe_allow_html=True)
-    
     # Header区域 - 标题+描述（增加底部间距）
     st.markdown("""
-    <div class="page-header" style="margin-bottom: 32px;">
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
         <h1 class="page-title">📊 数据上传中心</h1>
         <p class="page-subtitle" style="margin-bottom: 0;">导入绩效考核数据，系统将自动识别周期并生成分析报告</p>
     </div>
@@ -971,7 +961,13 @@ if menu == "📤 数据上传":
 
 # ==================== 页面2: 员工绩效追踪 ====================
 elif menu == "👤 员工绩效追踪":
-    st.markdown('<div class="main-header">👤 员工绩效追踪</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">👤 员工绩效追踪</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">查看员工历史绩效趋势，分析个人成长轨迹</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 获取所有员工
     employees = db.get_all_employees()
@@ -979,6 +975,13 @@ elif menu == "👤 员工绩效追踪":
     if not employees:
         st.warning("⚠️ 暂无数据，请先上传绩效数据")
     else:
+        # 筛选器区域 - 白色卡片
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 24px;">
+            <div class="card-title">🔍 筛选条件</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         # 先选择部门，再选择员工
         col1, col2, col3 = st.columns(3)
         
@@ -1112,7 +1115,13 @@ elif menu == "👤 员工绩效追踪":
 
 # ==================== 页面3: 部门绩效分析 ====================
 elif menu == "📈 部门绩效分析":
-    st.markdown('<div class="main-header">📈 部门绩效分析</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">📈 部门绩效分析</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">对比部门绩效表现，识别优势与改进空间</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 获取所有周期
     periods = db.get_all_periods()
@@ -1120,6 +1129,13 @@ elif menu == "📈 部门绩效分析":
     if not periods:
         st.warning("⚠️ 暂无数据，请先上传绩效数据")
     else:
+        # 筛选器区域 - 白色卡片
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 24px;">
+            <div class="card-title">🔍 筛选条件</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         # 周期和部门选择
         col1, col2 = st.columns(2)
         
@@ -1201,8 +1217,13 @@ elif menu == "📈 部门绩效分析":
 
 # ==================== 页面4: 面谈质量监控（重构升级版） ====================
 elif menu == "💬 面谈质量监控":
-    st.markdown('<div class="main-header">💬 面谈质量监控与分析</div>', unsafe_allow_html=True)
-    st.markdown("### 💡 从完成率到质量管理：趋势分析 + 质量评估 + 风险预警")
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">💬 面谈质量监控与分析</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">从完成率到质量管理：趋势分析 + 质量评估 + 风险预警</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     periods = db.get_all_periods()
     
@@ -1219,8 +1240,12 @@ elif menu == "💬 面谈质量监控":
         
         # ==================== Tab1: 上级维度趋势分析 ====================
         with tab1:
-            st.markdown("### 📈 上级面谈完成率趋势（团队对比）")
-            st.info("💡 **分析目标**：观察不同上级的面谈执行趋势，识别持续优秀/持续落后的管理者")
+            st.markdown("""
+            <div class="data-card" style="margin-bottom: 20px;">
+                <div class="card-title">📈 上级面谈完成率趋势</div>
+                <div class="card-subtitle">观察不同上级的面谈执行趋势，识别持续优秀/持续落后的管理者</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             # 筛选器
             col1, col2 = st.columns(2)
@@ -1619,12 +1644,22 @@ elif menu == "💬 面谈质量监控":
 
 # ==================== 页面5: 考核方案管理 ====================
 elif menu == "🔄 考核方案管理":
-    st.markdown('<div class="main-header">🔄 考核方案管理</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">🔄 考核方案管理</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">记录和跟踪考核方案变更历史</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["📝 添加方案变更", "📜 变更历史"])
     
     with tab1:
-        st.subheader("添加新的考核方案变更")
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 20px;">
+            <div class="card-title">添加新的考核方案变更</div>
+        </div>
+        """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
@@ -1691,9 +1726,20 @@ elif menu == "🔄 考核方案管理":
 
 # ==================== 页面6: 智能查询 ====================
 elif menu == "🔍 智能查询":
-    st.markdown('<div class="main-header">🔍 智能查询中心</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">🔍 智能查询中心</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">多维度组合查询，快速定位目标数据</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.subheader("高级筛选")
+    # 筛选器区域 - 白色卡片
+    st.markdown("""
+    <div class="data-card" style="margin-bottom: 24px;">
+        <div class="card-title">🔍 高级筛选</div>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
@@ -1753,9 +1799,13 @@ elif menu == "🔍 智能查询":
 
 # ==================== 页面6: 绩效分布监控 ====================
 elif menu == "📊 绩效分布监控":
-    # 页面标题
-    st.markdown('<div class="main-header">📊 绩效分布监控</div>', unsafe_allow_html=True)
-    st.markdown('<div class="main-subtitle">实时监控分数分布健康度，提前预警调整压力</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">📊 绩效分布监控</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">实时监控分数分布健康度，提前预警调整压力</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 获取所有周期
     periods = db.get_all_periods()
@@ -1773,9 +1823,10 @@ elif menu == "📊 绩效分布监控":
         
         # ==================== Tab1: 当前周期分布 ====================
         with tab1:
-            # 筛选器 - 浅粉色背景
+            # 筛选器 - 白色卡片
             st.markdown("""
-            <div style="background: #FFF9FB; padding: 20px 24px; border-radius: 8px; margin-bottom: 24px;">
+            <div class="data-card" style="margin-bottom: 24px;">
+                <div class="card-title">🔍 筛选条件</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -2298,8 +2349,13 @@ elif menu == "📊 绩效分布监控":
 
 # ==================== 页面7: 高级分析中心 ====================
 elif menu == "📊 高级分析":
-    st.markdown('<div class="main-header">📊 高级分析中心</div>', unsafe_allow_html=True)
-    st.markdown("### 💡 数据驱动的管理决策支持")
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">📊 高级分析中心</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">数据驱动的管理决策支持</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 获取所有周期
     periods = db.get_all_periods()
@@ -2307,6 +2363,13 @@ elif menu == "📊 高级分析":
     if not periods:
         st.warning("⚠️ 暂无数据，请先上传绩效数据")
     else:
+        # 筛选器区域 - 白色卡片
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 24px;">
+            <div class="card-title">🔍 筛选条件</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         # 周期选择
         selected_period = st.selectbox(
             "📅 选择考核周期",
@@ -2626,12 +2689,22 @@ elif menu == "📊 高级分析":
 
 # ==================== 页面8: 数据管理 ====================
 elif menu == "🗄️ 数据管理":
-    st.markdown('<div class="main-header">🗄️ 数据库管理</div>', unsafe_allow_html=True)
+    # Header区域
+    st.markdown("""
+    <div class="page-header" style="margin-bottom: 32px; margin-top: -100px;">
+        <h1 class="page-title">🗄️ 数据库管理</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">数据概览、删除、备份与恢复</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     tab1, tab2, tab3 = st.tabs(["📊 数据概览", "🗑️ 删除数据", "💾 备份与恢复"])
     
     with tab1:
-        st.subheader("📊 数据库概览")
+        st.markdown("""
+        <div class="data-card" style="margin-bottom: 20px;">
+            <div class="card-title">📊 数据库概览</div>
+        </div>
+        """, unsafe_allow_html=True)
         
         # 获取所有周期
         periods = db.get_all_periods()
